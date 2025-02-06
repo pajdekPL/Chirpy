@@ -1,0 +1,22 @@
+meta {
+  name: change user
+  type: http
+  seq: 9
+}
+
+put {
+  url: http://localhost:8080/api/users
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjaGlycHktYWNjZXNzIiwic3ViIjoiM2JlMmQzZTItZjMyYy00ZjNiLWFhNzktZGVhM2NlMmZhODgwIiwiZXhwIjoxNzM4Njg4NzI5LCJpYXQiOjE3Mzg2ODUxMjl9.xCmIsOTeoCzjoDh0mwT-s2aBVo9nrRzoH5_fl-Hluuw
+}
+
+body:json {
+  {
+    "email": "walte213r@breakingbad.com",
+    "password": "j3ssePinkM@nCantCook"
+  }
+}

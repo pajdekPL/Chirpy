@@ -1,0 +1,31 @@
+meta {
+  name: polka upgrade
+  type: http
+  seq: 10
+}
+
+post {
+  url: http://localhost:8080/api/polka/webhooks
+  body: json
+  auth: apikey
+}
+
+headers {
+  : 
+}
+
+auth:apikey {
+  key: Authorization
+  value: ApiKey f271c81ff7084ee5b99a5091b42d486e
+  placement: header
+}
+
+body:json {
+  {
+    "data": {
+      "user_id": "657723e6-ecc8-4e4a-adf7-7d75ea1eb3fc"
+    },
+    "event": "user.upgraded"
+  }
+  
+}

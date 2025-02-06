@@ -1,0 +1,17 @@
+meta {
+  name: validate chirp
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://localhost:8080/api/validate_chirp
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "body": "This is a kerfuffle opinion I need to share with the world"
+  }
+}

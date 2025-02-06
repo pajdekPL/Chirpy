@@ -1,0 +1,18 @@
+meta {
+  name: add chirp
+  type: http
+  seq: 5
+}
+
+post {
+  url: http://localhost:8080/api/chirps
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "body": "Hello, worldasdsad!",
+    "user_id": "82452a09-eaa0-4300-9a31-a6d87678eacb"
+  }
+}
