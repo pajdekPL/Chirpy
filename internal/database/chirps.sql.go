@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -66,25 +67,84 @@ func (q *Queries) GetChirp(ctx context.Context, id uuid.UUID) (Chirp, error) {
 }
 
 const getChirps = `-- name: GetChirps :many
-SELECT id, created_at, updated_at, body, user_id FROM chirps
-ORDER BY created_at ASC
+SELECT c.id, c.created_at, c.updated_at, c.body, c.user_id, u.user_name as author_name
+FROM chirps c
+JOIN users u ON c.user_id = u.id
+ORDER BY c.created_at ASC
 `
 
-func (q *Queries) GetChirps(ctx context.Context) ([]Chirp, error) {
+type GetChirpsRow struct {
+	ID         uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	Body       string
+	UserID     uuid.UUID
+	AuthorName string
+}
+
+func (q *Queries) GetChirps(ctx context.Context) ([]GetChirpsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getChirps)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Chirp
+	var items []GetChirpsRow
 	for rows.Next() {
-		var i Chirp
+		var i GetChirpsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Body,
 			&i.UserID,
+			&i.AuthorName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getChirpsByUser = `-- name: GetChirpsByUser :many
+SELECT c.id, c.created_at, c.updated_at, c.body, c.user_id, u.user_name as author_name
+FROM chirps c
+JOIN users u ON c.user_id = u.id
+WHERE c.user_id = $1
+ORDER BY c.created_at ASC
+`
+
+type GetChirpsByUserRow struct {
+	ID         uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	Body       string
+	UserID     uuid.UUID
+	AuthorName string
+}
+
+func (q *Queries) GetChirpsByUser(ctx context.Context, userID uuid.UUID) ([]GetChirpsByUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, getChirpsByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetChirpsByUserRow
+	for rows.Next() {
+		var i GetChirpsByUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+			&i.AuthorName,
 		); err != nil {
 			return nil, err
 		}

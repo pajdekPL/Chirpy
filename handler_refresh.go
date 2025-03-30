@@ -8,6 +8,16 @@ import (
 	"github.com/PajdekPL/Chirpy/internal/auth"
 )
 
+// @Summary      Refresh access token
+// @Description  Refreshes the access token using a valid refresh token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  ReturnUserData
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Router       /refresh [post]
 func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
 
 	type ReturnUserData struct {
@@ -38,6 +48,16 @@ func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary      Revoke refresh token
+// @Description  Revokes the current refresh token, logging out the user
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      204  "No Content"
+// @Failure      400  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Router       /revoke [post]
 func (cfg *apiConfig) handlerRevoke(w http.ResponseWriter, r *http.Request) {
 	refreshToken, err := auth.GetBearerToken(r.Header)
 
