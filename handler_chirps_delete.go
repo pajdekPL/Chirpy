@@ -8,6 +8,19 @@ import (
 	"github.com/google/uuid"
 )
 
+// @Summary      Delete the given chirp
+// @Description  Delete the chirp with the given UUID
+// @Tags         chirps
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "Chirp ID"
+// @Success      204    {string} string ""
+// @Failure      400    {object}  ErrorResponse
+// @Failure      401  	{object}  ErrorResponse
+// @Failure      404  	{object}  ErrorResponse
+// @Failure      500  	{object}  ErrorResponse
+// @Router       /chirps/{id} [delete]
 func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request) {
 	chirpID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chirpy - My Profile</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 min-h-screen">
+    <nav class="bg-white shadow-lg">
+      <div class="max-w-7xl mx-auto px-4">
+        <div class="flex justify-between h-16">
+          <div class="flex items-center space-x-4">
+            <a href="/home" class="text-xl font-bold">Chirpy</a>
+            <a href="/home" class="text-gray-600 hover:text-gray-900">Home</a>
+            <a
+              href="/profile"
+              class="text-gray-600 hover:text-gray-900 font-semibold"
+              >My Profile</a
+            >
+          </div>
+          <div class="flex items-center">
+            <button
+              id="logout-button"
+              class="text-gray-600 hover:text-gray-900"
+              onclick="logout()"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+      <div class="max-w-2xl mx-auto">
+        <!-- Profile Settings -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h1 class="text-2xl font-bold mb-6">Profile Settings</h1>
+          <div
+            id="profile-error-message"
+            class="hidden mb-4 p-4 text-sm text-red-700 bg-red-100 rounded-lg"
+          ></div>
+          <div class="space-y-4">
+            <div>
+              <label
+                for="user-name"
+                class="block text-sm font-medium text-gray-700"
+                >Your Name</label
+              >
+              <div class="mt-1 flex rounded-md shadow-sm">
+                <input
+                  type="text"
+                  id="user-name"
+                  name="user_name"
+                  class="flex-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+                <button
+                  id="update-name-button"
+                  type="button"
+                  class="ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Update Name
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- My Chirps -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h1 class="text-2xl font-bold mb-6">My Chirps</h1>
+          <div
+            id="error-message"
+            class="hidden mb-4 p-4 text-sm text-red-700 bg-red-100 rounded-lg"
+          ></div>
+          <div id="chirps-container" class="space-y-4">
+            <!-- Chirps will be loaded here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white shadow-lg mt-8 py-4" data-testid="footer">
+      <div class="container mx-auto px-4 text-center text-gray-600 text-sm">
+        <p data-testid="copyright-text">
+          © 2025 EgolessQA Adam Pajda. All rights reserved.
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      // Check if user is logged in
+      function checkAuth() {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          window.location.href = "/login";
+        }
+      }
+
+      // Logout function
+      function logout() {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        window.location.href = "/login";
+      }
+
+      // Load user's name
+      async function loadUserName() {
+        const token = localStorage.getItem("token");
+        try {
+          const response = await fetch("/api/users", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to load user data");
+          }
+
+          const userData = await response.json();
+          document.getElementById("user-name").value = userData.user_name;
+        } catch (error) {
+          const errorMessage = document.getElementById("profile-error-message");
+          errorMessage.textContent = error.message;
+          errorMessage.classList.remove("hidden");
+        }
+      }
+
+      // Update user's name
+      async function updateUserName() {
+        const token = localStorage.getItem("token");
+        const userNameInput = document.getElementById("user-name");
+        const errorMessage = document.getElementById("profile-error-message");
+        const submitButton = document.getElementById("update-name-button");
+
+        // Reset error message and disable button
+        errorMessage.classList.add("hidden");
+        submitButton.disabled = true;
+        submitButton.textContent = "Updating...";
+
+        try {
+          const response = await fetch("/api/users", {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              user_name: userNameInput.value,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || "Failed to update name");
+          }
+
+          // Show success message
+          errorMessage.textContent = "Name updated successfully!";
+          errorMessage.classList.remove("hidden", "bg-red-100", "text-red-700");
+          errorMessage.classList.add("bg-green-100", "text-green-700");
+
+          // Hide success message after 3 seconds
+          setTimeout(() => {
+            errorMessage.classList.add("hidden");
+          }, 3000);
+        } catch (error) {
+          // Show error message
+          errorMessage.textContent = error.message;
+          errorMessage.classList.remove(
+            "hidden",
+            "bg-green-100",
+            "text-green-700"
+          );
+          errorMessage.classList.add("bg-red-100", "text-red-700");
+        } finally {
+          // Re-enable button
+          submitButton.disabled = false;
+          submitButton.textContent = "Update Name";
+        }
+      }
+
+      // Load user's chirps
+      async function loadUserChirps() {
+        const token = localStorage.getItem("token");
+        try {
+          const response = await fetch("/api/user/chirps", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to load your chirps");
+          }
+
+          const chirps = await response.json();
+          const container = document.getElementById("chirps-container");
+          container.innerHTML = "";
+
+          if (chirps.length === 0) {
+            container.innerHTML = `
+              <p class="text-gray-500 text-center py-4">You haven't posted any chirps yet.</p>
+            `;
+            return;
+          }
+
+          chirps.forEach((chirp) => {
+            const chirpElement = document.createElement("div");
+            chirpElement.className = "bg-gray-50 rounded-lg p-4";
+            const date = new Date(chirp.created_at);
+            const formattedDate = date.toLocaleDateString();
+            chirpElement.innerHTML = `
+              <div class="flex justify-between items-start">
+                <div class="flex-grow">
+                  <p class="text-gray-900">${chirp.body}</p>
+                  <p class="text-sm text-gray-500 mt-1">Posted on ${formattedDate}</p>
+                </div>
+                <button 
+                  class="ml-4 text-red-500 hover:text-red-700 delete-chirp"
+                  data-chirp-id="${chirp.id}"
+                >
+                  Delete
+                </button>
+              </div>
+            `;
+            container.appendChild(chirpElement);
+          });
+
+          // Add event listeners to all delete buttons
+          document.querySelectorAll(".delete-chirp").forEach((button) => {
+            button.addEventListener("click", function () {
+              const chirpId = this.getAttribute("data-chirp-id");
+              deleteChirp(chirpId);
+            });
+          });
+        } catch (error) {
+          const errorMessage = document.getElementById("error-message");
+          errorMessage.textContent = error.message;
+          errorMessage.classList.remove("hidden");
+        }
+      }
+
+      // Delete chirp
+      async function deleteChirp(id) {
+        const token = localStorage.getItem("token");
+        try {
+          const response = await fetch(`/api/chirps/${id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to delete chirp");
+          }
+
+          await loadUserChirps();
+        } catch (error) {
+          const errorMessage = document.getElementById("error-message");
+          errorMessage.textContent = error.message;
+          errorMessage.classList.remove("hidden");
+        }
+      }
+
+      // Add event listener for update name button
+      document
+        .getElementById("update-name-button")
+        .addEventListener("click", updateUserName);
+
+      // Check auth and load data on page load
+      checkAuth();
+      loadUserName();
+      loadUserChirps();
+    </script>
+  </body>
+</html>

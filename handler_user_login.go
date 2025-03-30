@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/PajdekPL/Chirpy/internal/auth"
@@ -12,21 +11,33 @@ import (
 	"github.com/google/uuid"
 )
 
+type UserDataLogin struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+type ReturnDataLogin struct {
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
+	IsChirpyRed  bool      `json:"is_chirpy_red"`
+}
+
+// @Summary      User login
+// @Description  Authenticates a user and returns access and refresh tokens
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        credentials  body      UserDataLogin  true  "User credentials"
+// @Success      200          {object}  ReturnDataLogin
+// @Failure      401  		  {object}  ErrorResponse
+// @Failure      404  		  {object}  ErrorResponse
+// @Failure      500  	      {object}  ErrorResponse
+// @Router       /login [post]
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
-	type UserData struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-	type ReturnUserData struct {
-		ID           uuid.UUID `json:"id"`
-		CreatedAt    time.Time `json:"created_at"`
-		UpdatedAt    time.Time `json:"updated_at"`
-		Email        string    `json:"email"`
-		Token        string    `json:"token"`
-		RefreshToken string    `json:"refresh_token"`
-		IsChirpyRed  bool      `json:"is_chirpy_red"`
-	}
-	data := UserData{}
+	data := UserDataChange{}
 
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&data)
@@ -80,7 +91,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, ReturnUserData{
+	respondWithJSON(w, http.StatusOK, ReturnDataLogin{
 		ID:           userDb.ID,
 		CreatedAt:    userDb.CreatedAt,
 		UpdatedAt:    userDb.UpdatedAt,
@@ -91,12 +102,12 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func getDurationFromExpiresInSeconds(expiresInSeconds string) time.Duration {
-	seconds, err := strconv.Atoi(expiresInSeconds)
-	if err != nil || seconds > 3600 || seconds <= 0 {
-		duration, _ := time.ParseDuration("1h")
-		return duration
-	}
-	duration, _ := time.ParseDuration(string(seconds) + "s")
-	return duration
-}
+// func getDurationFromExpiresInSeconds(expiresInSeconds string) time.Duration {
+// 	seconds, err := strconv.Atoi(expiresInSeconds)
+// 	if err != nil || seconds > 3600 || seconds <= 0 {
+// 		duration, _ := time.ParseDuration("1h")
+// 		return duration
+// 	}
+// 	duration, _ := time.ParseDuration(string(seconds) + "s")
+// 	return duration
+// }

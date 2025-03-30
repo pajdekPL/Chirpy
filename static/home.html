@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chirpy - Home</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 min-h-screen" data-testid="home-page">
+    <nav class="bg-white shadow-lg" data-testid="main-nav">
+      <div class="max-w-7xl mx-auto px-4">
+        <div class="flex justify-between h-16">
+          <div class="flex items-center space-x-4">
+            <a href="/home" class="text-xl font-bold" data-testid="nav-logo"
+              >Chirpy</a
+            >
+            <a
+              href="/home"
+              class="text-gray-600 hover:text-gray-900 font-semibold"
+              data-testid="nav-home-link"
+              >Home</a
+            >
+            <a
+              href="/profile"
+              class="text-gray-600 hover:text-gray-900"
+              data-testid="nav-profile-link"
+              >My Profile</a
+            >
+          </div>
+          <div class="flex items-center">
+            <button
+              id="logout-button"
+              class="text-gray-600 hover:text-gray-900"
+              onclick="logout()"
+              data-testid="logout-button"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+      <div class="max-w-2xl mx-auto">
+        <!-- Create Chirp Form -->
+        <div
+          class="bg-white rounded-lg shadow-md p-6 mb-6"
+          data-testid="create-chirp-form"
+        >
+          <h2
+            class="text-xl font-semibold mb-4"
+            data-testid="create-chirp-title"
+          >
+            Create a Chirp
+          </h2>
+          <div
+            id="error-message"
+            class="hidden mb-4 p-4 text-sm text-red-700 bg-red-100 rounded-lg"
+            data-testid="error-message"
+          ></div>
+          <form id="chirp-form" class="space-y-4" data-testid="chirp-form">
+            <div>
+              <label
+                for="chirp-text"
+                class="block text-sm font-medium text-gray-700"
+                data-testid="chirp-text-label"
+                >What's on your mind?</label
+              >
+              <textarea
+                id="chirp-text"
+                name="body"
+                required
+                maxlength="140"
+                rows="3"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                data-testid="chirp-text-input"
+              ></textarea>
+              <div
+                class="mt-1 text-sm text-gray-500"
+                data-testid="char-count-container"
+              >
+                <span id="char-count" data-testid="char-count">0</span>/140
+                characters
+              </div>
+            </div>
+            <button
+              id="submit-chirp"
+              type="button"
+              class="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              data-testid="submit-chirp-button"
+            >
+              Post Chirp
+            </button>
+          </form>
+        </div>
+
+        <!-- Chirps List -->
+        <div
+          id="chirps-container"
+          class="space-y-4"
+          data-testid="chirps-container"
+        >
+          <!-- Chirps will be loaded here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white shadow-lg mt-8 py-4" data-testid="footer">
+      <div class="container mx-auto px-4 text-center text-gray-600 text-sm">
+        <p data-testid="copyright-text">
+          © 2025 EgolessQA Adam Pajda. All rights reserved.
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      // Check if user is logged in
+      function checkAuth() {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          window.location.href = "/login";
+        }
+      }
+
+      // Logout function
+      function logout() {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        window.location.href = "/login";
+      }
+
+      // Character counter for chirp text
+      document
+        .getElementById("chirp-text")
+        .addEventListener("input", function (e) {
+          const count = e.target.value.length;
+          document.getElementById("char-count").textContent = count;
+        });
+
+      // Load chirps
+      async function loadChirps() {
+        const token = localStorage.getItem("token");
+        try {
+          const response = await fetch("/api/chirps", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to load chirps");
+          }
+
+          const chirps = await response.json();
+          const container = document.getElementById("chirps-container");
+          container.innerHTML = "";
+
+          chirps.forEach((chirp) => {
+            const chirpElement = document.createElement("div");
+            chirpElement.className = "bg-white rounded-lg shadow-md p-6";
+            chirpElement.setAttribute("data-testid", `chirp-${chirp.id}`);
+            chirpElement.innerHTML = `
+              <div class="flex justify-between items-start">
+                <div class="w-full">
+                  <p class="text-gray-900" data-testid="chirp-body">${
+                    chirp.body
+                  }</p>
+                  <div class="flex items-center space-x-2 text-sm text-gray-500 mt-1" data-testid="chirp-meta">
+                    <span data-testid="chirp-author">Posted by ${
+                      chirp.author_name
+                    }</span>
+                    <span>•</span>
+                    <span data-testid="chirp-date">${new Date(
+                      chirp.created_at
+                    ).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}</span>
+                  </div>
+                </div>
+              </div>
+            `;
+            container.appendChild(chirpElement);
+          });
+        } catch (error) {
+          console.error("Error loading chirps:", error);
+        }
+      }
+
+      // Create new chirp
+      document
+        .getElementById("submit-chirp")
+        .addEventListener("click", async function () {
+          const form = document.getElementById("chirp-form");
+          const errorMessage = document.getElementById("error-message");
+          const submitButton = document.getElementById("submit-chirp");
+          const token = localStorage.getItem("token");
+
+          // Reset error message and disable button
+          errorMessage.classList.add("hidden");
+          submitButton.disabled = true;
+          submitButton.textContent = "Posting...";
+
+          const formData = new FormData(form);
+          const jsonObject = {};
+
+          formData.forEach((value, key) => {
+            jsonObject[key] = value;
+          });
+
+          try {
+            const response = await fetch("/api/chirps", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(jsonObject),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || "Failed to create chirp");
+            }
+
+            // Clear form and reload chirps
+            form.reset();
+            document.getElementById("char-count").textContent = "0";
+            await loadChirps();
+          } catch (error) {
+            // Show error message
+            errorMessage.textContent = error.message;
+            errorMessage.classList.remove("hidden");
+          } finally {
+            // Re-enable button
+            submitButton.disabled = false;
+            submitButton.textContent = "Post Chirp";
+          }
+        });
+
+      // Check auth and load chirps on page load
+      checkAuth();
+      loadChirps();
+    </script>
+  </body>
+</html>

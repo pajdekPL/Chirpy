@@ -6,12 +6,21 @@ VALUES (
 RETURNING *;
 
 -- name: GetChirps :many
-SELECT id, created_at, updated_at, body, user_id FROM chirps
-ORDER BY created_at ASC;
+SELECT c.id, c.created_at, c.updated_at, c.body, c.user_id, u.user_name as author_name
+FROM chirps c
+JOIN users u ON c.user_id = u.id
+ORDER BY c.created_at ASC;
 
 -- name: GetChirp :one
 SELECT id, created_at, updated_at, body, user_id FROM chirps
 WHERE id = $1;
+
+-- name: GetChirpsByUser :many
+SELECT c.id, c.created_at, c.updated_at, c.body, c.user_id, u.user_name as author_name
+FROM chirps c
+JOIN users u ON c.user_id = u.id
+WHERE c.user_id = $1
+ORDER BY c.created_at ASC;
 
 -- name: DeleteChirp :exec
 DELETE FROM chirps
