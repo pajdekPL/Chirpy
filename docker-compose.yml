@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
       - "8080:8080"
     env_file:
@@ -19,6 +20,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.migrations
+    restart: on-failure
     env_file:
       - .env
     depends_on:
@@ -28,6 +30,7 @@ services:
 
   postgres:
     image: postgres:17
+    restart: unless-stopped
     ports:
       - "5432:5432"
     env_file:
