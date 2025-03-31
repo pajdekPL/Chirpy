@@ -42,7 +42,6 @@ type ReturnDataCreateUser struct {
 // @Failure      500  	   {object}  ErrorResponse
 // @Router       /users [post]
 func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
-
 	data := UserDataCreate{}
 
 	decoder := json.NewDecoder(r.Body)

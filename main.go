@@ -75,6 +75,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	var currentUser string
+	err = db.QueryRow("SELECT current_user").Scan(&currentUser)
+	if err != nil {
+		log.Fatalf("Failed to check current DB user: %v", err)
+	}
+	log.Printf("Connected as user: %s", currentUser)
 	dbQueries := database.New(db)
 
 	const filepathRoot = "."
