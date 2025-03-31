@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  chirpy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+    networks:
+      - chirpy-network
+
+  migrations:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    working_dir: /app
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    networks:
+      - chirpy-network
+    command: sh -c "apk add --no-cache netcat-openbsd && chmod +x migrate.sh && ./migrate.sh"
+
+  postgres:
+    image: postgres:17
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env_pg
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - chirpy-network
+
+volumes:
+  postgres_data:
+
+networks:
+  chirpy-network:
+    driver: bridge
