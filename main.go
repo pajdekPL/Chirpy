@@ -26,7 +26,7 @@ import (
 // @license.name  Apache 2.0
 // @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host      localhost:8080
+// @host      chirpy.bieda.it
 // @BasePath  /api
 
 // @securityDefinitions.apikey BearerAuth
@@ -75,12 +75,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var currentUser string
-	err = db.QueryRow("SELECT current_user").Scan(&currentUser)
-	if err != nil {
-		log.Fatalf("Failed to check current DB user: %v", err)
-	}
-	log.Printf("Connected as user: %s", currentUser)
 	dbQueries := database.New(db)
 
 	const filepathRoot = "."

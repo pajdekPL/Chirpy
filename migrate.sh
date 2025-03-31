@@ -10,7 +10,7 @@ echo "PostgreSQL is ready!"
 # Run migrations
 echo "Running migrations..."
 
-goose -dir sql/schema postgres "$DB_URL" up
+goose -dir /migrations postgres "$DB_URL" up
 
 
 echo "Migrations completed!" 
