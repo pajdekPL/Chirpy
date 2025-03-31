@@ -1,0 +1,10 @@
+FROM gomicro/goose
+
+# Copy SQL schema files
+COPY sql/schema /migrations/
+
+# Copy and set up the entrypoint script
+COPY migrate.sh /migrations/entrypoint.sh
+RUN chmod +x /migrations/entrypoint.sh
+
+ENTRYPOINT ["/migrations/entrypoint.sh"] 

@@ -18,17 +18,13 @@ services:
   migrations:
     build:
       context: .
-      dockerfile: Dockerfile
-    volumes:
-      - .:/app
-    working_dir: /app
+      dockerfile: Dockerfile.migrations
     env_file:
       - .env
     depends_on:
       - postgres
     networks:
       - chirpy-network
-    command: sh -c "apk add --no-cache netcat-openbsd && chmod +x migrate.sh && ./migrate.sh"
 
   postgres:
     image: postgres:17
