@@ -12,11 +12,12 @@ import (
 )
 
 type Chirp struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Body      string
-	UserID    uuid.UUID
+	ID                 uuid.UUID
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	Body               string
+	UserID             uuid.UUID
+	ExpirationDatetime time.Time
 }
 
 type RefreshToken struct {

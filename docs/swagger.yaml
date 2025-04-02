@@ -8,6 +8,8 @@ definitions:
         type: string
       created_at:
         type: string
+      expiration_datetime:
+        type: string
       id:
         type: string
       updated_at:
@@ -19,6 +21,9 @@ definitions:
     properties:
       body:
         example: My super chirp!
+        type: string
+      expiration_datetime:
+        example: "2023-12-31T23:59:59Z"
         type: string
     type: object
   main.ErrorResponse:
@@ -387,6 +392,11 @@ paths:
       consumes:
       - application/json
       description: Retrieves all chirps created by the authenticated user
+      parameters:
+      - description: filter=expired to filter by expired chirps
+        in: query
+        name: filter
+        type: string
       produces:
       - application/json
       responses:

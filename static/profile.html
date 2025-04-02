@@ -75,6 +75,29 @@
             id="error-message"
             class="hidden mb-4 p-4 text-sm text-red-700 bg-red-100 rounded-lg"
           ></div>
+
+          <!-- Tabs -->
+          <div class="border-b border-gray-200 mb-4">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+              <button
+                id="active-tab"
+                class="border-blue-500 text-blue-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
+                onclick="switchTab('active')"
+                data-testid="active-tab"
+              >
+                Active Chirps
+              </button>
+              <button
+                id="expired-tab"
+                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
+                onclick="switchTab('expired')"
+                data-testid="expired-tab"
+              >
+                Expired Chirps
+              </button>
+            </nav>
+          </div>
+
           <div id="chirps-container" class="space-y-4">
             <!-- Chirps will be loaded here -->
           </div>
@@ -186,13 +209,67 @@
       }
 
       // Load user's chirps
-      async function loadUserChirps() {
+      let currentRequest = null;
+      let currentFilter = "active";
+      let isPageActive = true;
+
+      // Cleanup function to cancel pending requests
+      function cleanup() {
+        isPageActive = false;
+        if (currentRequest) {
+          currentRequest.abort();
+          currentRequest = null;
+        }
+        if (switchTimeout) {
+          clearTimeout(switchTimeout);
+          switchTimeout = null;
+        }
+      }
+
+      // Add event listener for page visibility change
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "hidden") {
+          cleanup();
+        }
+      });
+
+      // Add event listener for beforeunload
+      window.addEventListener("beforeunload", cleanup);
+
+      // Add cleanup to navigation links
+      document.querySelectorAll("a").forEach((link) => {
+        link.addEventListener("click", cleanup);
+      });
+
+      // Add cleanup to logout button
+      document
+        .getElementById("logout-button")
+        .addEventListener("click", function (e) {
+          cleanup();
+          logout();
+        });
+
+      async function loadUserChirps(filter = "active") {
+        if (!isPageActive) return; // Don't start new requests if page is inactive
+
         const token = localStorage.getItem("token");
+
+        // Cancel previous request if it exists
+        if (currentRequest) {
+          currentRequest.abort();
+        }
+
+        // Create new AbortController for this request
+        const controller = new AbortController();
+        currentRequest = controller;
+        currentFilter = filter;
+
         try {
-          const response = await fetch("/api/user/chirps", {
+          const response = await fetch(`/api/user/chirps?filter=${filter}`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+            signal: controller.signal,
           });
 
           if (!response.ok) {
@@ -200,49 +277,83 @@
           }
 
           const chirps = await response.json();
-          const container = document.getElementById("chirps-container");
-          container.innerHTML = "";
 
-          if (chirps.length === 0) {
-            container.innerHTML = `
-              <p class="text-gray-500 text-center py-4">You haven't posted any chirps yet.</p>
-            `;
-            return;
-          }
+          // Only update the UI if this is still the current filter and page is active
+          if (filter === currentFilter && isPageActive) {
+            const container = document.getElementById("chirps-container");
+            container.innerHTML = "";
 
-          chirps.forEach((chirp) => {
-            const chirpElement = document.createElement("div");
-            chirpElement.className = "bg-gray-50 rounded-lg p-4";
-            const date = new Date(chirp.created_at);
-            const formattedDate = date.toLocaleDateString();
-            chirpElement.innerHTML = `
-              <div class="flex justify-between items-start">
-                <div class="flex-grow">
-                  <p class="text-gray-900">${chirp.body}</p>
-                  <p class="text-sm text-gray-500 mt-1">Posted on ${formattedDate}</p>
+            if (chirps.length === 0) {
+              container.innerHTML = `
+                <p class="text-gray-500 text-center py-4">${
+                  filter === "active"
+                    ? "You haven't posted any active chirps yet."
+                    : "You don't have any expired chirps."
+                }</p>
+              `;
+              return;
+            }
+
+            chirps.forEach((chirp) => {
+              const chirpElement = document.createElement("div");
+              chirpElement.className = "bg-gray-50 rounded-lg p-4";
+              const date = new Date(chirp.created_at);
+              const formattedDate = date.toLocaleDateString();
+              chirpElement.innerHTML = `
+                <div class="flex justify-between items-start">
+                  <div class="flex-grow">
+                    <p class="text-gray-900">${chirp.body}</p>
+                    <p class="text-sm text-gray-500 mt-1">Posted on ${formattedDate}</p>
+                    ${
+                      chirp.expiration_datetime
+                        ? `
+                    <p class="text-sm text-red-500 mt-1">${
+                      filter === "expired" ? "Expired" : "Expires"
+                    }: ${new Date(chirp.expiration_datetime).toLocaleDateString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }
+                          )}</p>
+                    `
+                        : ""
+                    }
+                  </div>
+                  <button 
+                    class="ml-4 text-red-500 hover:text-red-700 delete-chirp"
+                    data-chirp-id="${chirp.id}"
+                  >
+                    Delete
+                  </button>
                 </div>
-                <button 
-                  class="ml-4 text-red-500 hover:text-red-700 delete-chirp"
-                  data-chirp-id="${chirp.id}"
-                >
-                  Delete
-                </button>
-              </div>
-            `;
-            container.appendChild(chirpElement);
-          });
-
-          // Add event listeners to all delete buttons
-          document.querySelectorAll(".delete-chirp").forEach((button) => {
-            button.addEventListener("click", function () {
-              const chirpId = this.getAttribute("data-chirp-id");
-              deleteChirp(chirpId);
+              `;
+              container.appendChild(chirpElement);
             });
-          });
+
+            // Add event listeners to all delete buttons
+            document.querySelectorAll(".delete-chirp").forEach((button) => {
+              button.addEventListener("click", function () {
+                const chirpId = this.getAttribute("data-chirp-id");
+                deleteChirp(chirpId);
+              });
+            });
+          }
         } catch (error) {
-          const errorMessage = document.getElementById("error-message");
-          errorMessage.textContent = error.message;
-          errorMessage.classList.remove("hidden");
+          // Only show error if it's not an abort error and this is still the current filter
+          if (error.name !== "AbortError" && filter === currentFilter) {
+            const errorMessage = document.getElementById("error-message");
+            errorMessage.textContent = error.message;
+            errorMessage.classList.remove("hidden");
+          }
+        } finally {
+          // Clear the current request if it's still the current one
+          if (currentRequest === controller) {
+            currentRequest = null;
+          }
         }
       }
 
@@ -269,6 +380,55 @@
         }
       }
 
+      // Switch between active and expired chirps tabs
+      let switchTimeout = null;
+      function switchTab(tab) {
+        // Clear any pending timeout
+        if (switchTimeout) {
+          clearTimeout(switchTimeout);
+        }
+
+        const activeTab = document.getElementById("active-tab");
+        const expiredTab = document.getElementById("expired-tab");
+
+        if (tab === "active") {
+          activeTab.classList.remove(
+            "border-transparent",
+            "text-gray-500",
+            "hover:text-gray-700",
+            "hover:border-gray-300"
+          );
+          activeTab.classList.add("border-blue-500", "text-blue-600");
+          expiredTab.classList.remove("border-blue-500", "text-blue-600");
+          expiredTab.classList.add(
+            "border-transparent",
+            "text-gray-500",
+            "hover:text-gray-700",
+            "hover:border-gray-300"
+          );
+        } else {
+          expiredTab.classList.remove(
+            "border-transparent",
+            "text-gray-500",
+            "hover:text-gray-700",
+            "hover:border-gray-300"
+          );
+          expiredTab.classList.add("border-blue-500", "text-blue-600");
+          activeTab.classList.remove("border-blue-500", "text-blue-600");
+          activeTab.classList.add(
+            "border-transparent",
+            "text-gray-500",
+            "hover:text-gray-700",
+            "hover:border-gray-300"
+          );
+        }
+
+        // Debounce the loadUserChirps call
+        switchTimeout = setTimeout(() => {
+          loadUserChirps(tab);
+        }, 100);
+      }
+
       // Add event listener for update name button
       document
         .getElementById("update-name-button")
@@ -277,7 +437,7 @@
       // Check auth and load data on page load
       checkAuth();
       loadUserName();
-      loadUserChirps();
+      loadUserChirps("active");
     </script>
   </body>
 </html>

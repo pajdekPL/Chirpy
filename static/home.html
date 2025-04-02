@@ -6,6 +6,13 @@
     <title>Chirpy - Home</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Flatpickr CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+    />
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   </head>
   <body class="bg-gray-100 min-h-screen" data-testid="home-page">
     <nav class="bg-white shadow-lg" data-testid="main-nav">
@@ -85,6 +92,46 @@
                 characters
               </div>
             </div>
+            <div>
+              <label
+                for="chirp-datetime"
+                class="block text-sm font-medium text-gray-700"
+                data-testid="chirp-datetime-label"
+                >Chirp expiration date</label
+              >
+              <div class="mt-1 relative rounded-md shadow-sm">
+                <input
+                  type="text"
+                  id="chirp-datetime"
+                  name="expiration_datetime"
+                  class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pr-10"
+                  data-testid="chirp-datetime-input"
+                  placeholder="Select date and time"
+                />
+                <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                  <button
+                    type="button"
+                    class="text-gray-400 hover:text-gray-500 focus:outline-none"
+                    data-testid="calendar-icon-button"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
             <button
               id="submit-chirp"
               type="button"
@@ -132,6 +179,41 @@
         window.location.href = "/login";
       }
 
+      // Cleanup function to cancel pending requests
+      let isPageActive = true;
+      let currentRequest = null;
+
+      function cleanup() {
+        isPageActive = false;
+        if (currentRequest) {
+          currentRequest.abort();
+          currentRequest = null;
+        }
+      }
+
+      // Add event listener for page visibility change
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "hidden") {
+          cleanup();
+        }
+      });
+
+      // Add event listener for beforeunload
+      window.addEventListener("beforeunload", cleanup);
+
+      // Add cleanup to navigation links
+      document.querySelectorAll("a").forEach((link) => {
+        link.addEventListener("click", cleanup);
+      });
+
+      // Add cleanup to logout button
+      document
+        .getElementById("logout-button")
+        .addEventListener("click", function (e) {
+          cleanup();
+          logout();
+        });
+
       // Character counter for chirp text
       document
         .getElementById("chirp-text")
@@ -142,12 +224,25 @@
 
       // Load chirps
       async function loadChirps() {
+        if (!isPageActive) return; // Don't start new requests if page is inactive
+
         const token = localStorage.getItem("token");
+
+        // Cancel previous request if it exists
+        if (currentRequest) {
+          currentRequest.abort();
+        }
+
+        // Create new AbortController for this request
+        const controller = new AbortController();
+        currentRequest = controller;
+
         try {
           const response = await fetch("/api/chirps", {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+            signal: controller.signal,
           });
 
           if (!response.ok) {
@@ -155,41 +250,69 @@
           }
 
           const chirps = await response.json();
-          const container = document.getElementById("chirps-container");
-          container.innerHTML = "";
 
-          chirps.forEach((chirp) => {
-            const chirpElement = document.createElement("div");
-            chirpElement.className = "bg-white rounded-lg shadow-md p-6";
-            chirpElement.setAttribute("data-testid", `chirp-${chirp.id}`);
-            chirpElement.innerHTML = `
-              <div class="flex justify-between items-start">
-                <div class="w-full">
-                  <p class="text-gray-900" data-testid="chirp-body">${
-                    chirp.body
-                  }</p>
-                  <div class="flex items-center space-x-2 text-sm text-gray-500 mt-1" data-testid="chirp-meta">
-                    <span data-testid="chirp-author">Posted by ${
-                      chirp.author_name
-                    }</span>
-                    <span>•</span>
-                    <span data-testid="chirp-date">${new Date(
-                      chirp.created_at
-                    ).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}</span>
+          // Only update the UI if the page is still active
+          if (isPageActive) {
+            const container = document.getElementById("chirps-container");
+            container.innerHTML = "";
+
+            chirps.forEach((chirp) => {
+              const chirpElement = document.createElement("div");
+              chirpElement.className = "bg-white rounded-lg shadow-md p-6";
+              chirpElement.setAttribute("data-testid", `chirp-${chirp.id}`);
+              chirpElement.innerHTML = `
+                <div class="flex justify-between items-start">
+                  <div class="w-full">
+                    <p class="text-gray-900" data-testid="chirp-body">${
+                      chirp.body
+                    }</p>
+                    <div class="flex items-center space-x-2 text-sm text-gray-500 mt-1" data-testid="chirp-meta">
+                      <span data-testid="chirp-author">Posted by ${
+                        chirp.author_name
+                      }</span>
+                      <span>•</span>
+                      <span data-testid="chirp-date">${new Date(
+                        chirp.created_at
+                      ).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}</span>
+                      ${
+                        chirp.expiration_datetime
+                          ? `
+                      <span>•</span>
+                      <span data-testid="chirp-expiration" class="text-red-500">Expires: ${new Date(
+                        chirp.expiration_datetime
+                      ).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}</span>
+                      `
+                          : ""
+                      }
+                    </div>
                   </div>
                 </div>
-              </div>
-            `;
-            container.appendChild(chirpElement);
-          });
+              `;
+              container.appendChild(chirpElement);
+            });
+          }
         } catch (error) {
-          console.error("Error loading chirps:", error);
+          // Only show error if it's not an abort error and page is still active
+          if (error.name !== "AbortError" && isPageActive) {
+            console.error("Error loading chirps:", error);
+          }
+        } finally {
+          // Clear the current request if it's still the current one
+          if (currentRequest === controller) {
+            currentRequest = null;
+          }
         }
       }
 
@@ -213,6 +336,13 @@
           formData.forEach((value, key) => {
             jsonObject[key] = value;
           });
+
+          // Convert datetime to ISO format if provided
+          if (jsonObject.expiration_datetime) {
+            jsonObject.expiration_datetime = new Date(
+              jsonObject.expiration_datetime
+            ).toISOString();
+          }
 
           try {
             const response = await fetch("/api/chirps", {
@@ -248,6 +378,27 @@
       // Check auth and load chirps on page load
       checkAuth();
       loadChirps();
+
+      // Set default expiration date to 2 hours from now
+      const setDefaultExpirationDate = () => {
+        const now = new Date();
+        const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000); // Add 2 hours in milliseconds
+
+        // Initialize Flatpickr
+        flatpickr("#chirp-datetime", {
+          enableTime: true,
+          dateFormat: "Y-m-d H:i",
+          defaultDate: twoHoursFromNow,
+          minDate: "today",
+          time_24hr: true,
+          locale: {
+            firstDayOfWeek: 1,
+          },
+        });
+      };
+
+      // Set default expiration date when page loads
+      setDefaultExpirationDate();
     </script>
   </body>
 </html>

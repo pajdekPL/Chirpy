@@ -418,6 +418,14 @@ const docTemplate = `{
                     "chirps"
                 ],
                 "summary": "Get chirps for the currently authenticated user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "filter=expired to filter by expired chirps",
+                        "name": "filter",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -678,6 +686,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "expiration_datetime": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -695,6 +706,10 @@ const docTemplate = `{
                 "body": {
                     "type": "string",
                     "example": "My super chirp!"
+                },
+                "expiration_datetime": {
+                    "type": "string",
+                    "example": "2023-12-31T23:59:59Z"
                 }
             }
         },

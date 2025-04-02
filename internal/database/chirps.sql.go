@@ -13,20 +13,21 @@ import (
 )
 
 const createChirp = `-- name: CreateChirp :one
-INSERT INTO chirps (id, created_at, updated_at, body, user_id)
+INSERT INTO chirps (id, created_at, updated_at, body, user_id, expiration_datetime)
 VALUES (
-    gen_random_uuid(), NOW(), NOW(), $1, $2
+    gen_random_uuid(), NOW(), NOW(), $1, $2, $3
 )
-RETURNING id, created_at, updated_at, body, user_id
+RETURNING id, created_at, updated_at, body, user_id, expiration_datetime
 `
 
 type CreateChirpParams struct {
-	Body   string
-	UserID uuid.UUID
+	Body               string
+	UserID             uuid.UUID
+	ExpirationDatetime time.Time
 }
 
 func (q *Queries) CreateChirp(ctx context.Context, arg CreateChirpParams) (Chirp, error) {
-	row := q.db.QueryRowContext(ctx, createChirp, arg.Body, arg.UserID)
+	row := q.db.QueryRowContext(ctx, createChirp, arg.Body, arg.UserID, arg.ExpirationDatetime)
 	var i Chirp
 	err := row.Scan(
 		&i.ID,
@@ -34,6 +35,7 @@ func (q *Queries) CreateChirp(ctx context.Context, arg CreateChirpParams) (Chirp
 		&i.UpdatedAt,
 		&i.Body,
 		&i.UserID,
+		&i.ExpirationDatetime,
 	)
 	return i, err
 }
@@ -49,7 +51,7 @@ func (q *Queries) DeleteChirp(ctx context.Context, id uuid.UUID) error {
 }
 
 const getChirp = `-- name: GetChirp :one
-SELECT id, created_at, updated_at, body, user_id FROM chirps
+SELECT id, created_at, updated_at, body, user_id, expiration_datetime FROM chirps
 WHERE id = $1
 `
 
@@ -62,24 +64,27 @@ func (q *Queries) GetChirp(ctx context.Context, id uuid.UUID) (Chirp, error) {
 		&i.UpdatedAt,
 		&i.Body,
 		&i.UserID,
+		&i.ExpirationDatetime,
 	)
 	return i, err
 }
 
 const getChirps = `-- name: GetChirps :many
-SELECT c.id, c.created_at, c.updated_at, c.body, c.user_id, u.user_name as author_name
+SELECT c.id, c.created_at, c.updated_at, c.body, c.user_id, c.expiration_datetime, u.user_name as author_name
 FROM chirps c
 JOIN users u ON c.user_id = u.id
+WHERE c.expiration_datetime > NOW()
 ORDER BY c.created_at ASC
 `
 
 type GetChirpsRow struct {
-	ID         uuid.UUID
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	Body       string
-	UserID     uuid.UUID
-	AuthorName string
+	ID                 uuid.UUID
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	Body               string
+	UserID             uuid.UUID
+	ExpirationDatetime time.Time
+	AuthorName         string
 }
 
 func (q *Queries) GetChirps(ctx context.Context) ([]GetChirpsRow, error) {
@@ -97,6 +102,7 @@ func (q *Queries) GetChirps(ctx context.Context) ([]GetChirpsRow, error) {
 			&i.UpdatedAt,
 			&i.Body,
 			&i.UserID,
+			&i.ExpirationDatetime,
 			&i.AuthorName,
 		); err != nil {
 			return nil, err
@@ -113,20 +119,21 @@ func (q *Queries) GetChirps(ctx context.Context) ([]GetChirpsRow, error) {
 }
 
 const getChirpsByUser = `-- name: GetChirpsByUser :many
-SELECT c.id, c.created_at, c.updated_at, c.body, c.user_id, u.user_name as author_name
+SELECT c.id, c.created_at, c.updated_at, c.body, c.user_id, c.expiration_datetime, u.user_name as author_name
 FROM chirps c
 JOIN users u ON c.user_id = u.id
-WHERE c.user_id = $1
+WHERE c.user_id = $1 AND c.expiration_datetime > NOW()
 ORDER BY c.created_at ASC
 `
 
 type GetChirpsByUserRow struct {
-	ID         uuid.UUID
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	Body       string
-	UserID     uuid.UUID
-	AuthorName string
+	ID                 uuid.UUID
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	Body               string
+	UserID             uuid.UUID
+	ExpirationDatetime time.Time
+	AuthorName         string
 }
 
 func (q *Queries) GetChirpsByUser(ctx context.Context, userID uuid.UUID) ([]GetChirpsByUserRow, error) {
@@ -144,6 +151,105 @@ func (q *Queries) GetChirpsByUser(ctx context.Context, userID uuid.UUID) ([]GetC
 			&i.UpdatedAt,
 			&i.Body,
 			&i.UserID,
+			&i.ExpirationDatetime,
+			&i.AuthorName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getExpiredChirps = `-- name: GetExpiredChirps :many
+SELECT c.id, c.created_at, c.updated_at, c.body, c.user_id, c.expiration_datetime, u.user_name as author_name
+FROM chirps c
+JOIN users u ON c.user_id = u.id
+WHERE c.expiration_datetime < NOW()
+ORDER BY c.created_at ASC
+`
+
+type GetExpiredChirpsRow struct {
+	ID                 uuid.UUID
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	Body               string
+	UserID             uuid.UUID
+	ExpirationDatetime time.Time
+	AuthorName         string
+}
+
+func (q *Queries) GetExpiredChirps(ctx context.Context) ([]GetExpiredChirpsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getExpiredChirps)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetExpiredChirpsRow
+	for rows.Next() {
+		var i GetExpiredChirpsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+			&i.ExpirationDatetime,
+			&i.AuthorName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getExpiredChirpsByUser = `-- name: GetExpiredChirpsByUser :many
+SELECT c.id, c.created_at, c.updated_at, c.body, c.user_id, c.expiration_datetime, u.user_name as author_name
+FROM chirps c
+JOIN users u ON c.user_id = u.id
+WHERE c.user_id = $1 AND c.expiration_datetime < NOW()
+ORDER BY c.created_at ASC
+`
+
+type GetExpiredChirpsByUserRow struct {
+	ID                 uuid.UUID
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	Body               string
+	UserID             uuid.UUID
+	ExpirationDatetime time.Time
+	AuthorName         string
+}
+
+func (q *Queries) GetExpiredChirpsByUser(ctx context.Context, userID uuid.UUID) ([]GetExpiredChirpsByUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, getExpiredChirpsByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetExpiredChirpsByUserRow
+	for rows.Next() {
+		var i GetExpiredChirpsByUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+			&i.ExpirationDatetime,
 			&i.AuthorName,
 		); err != nil {
 			return nil, err

@@ -13,16 +13,18 @@ import (
 )
 
 type Chirp struct {
-	ID         uuid.UUID `json:"id"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
-	UserID     uuid.UUID `json:"user_id"`
-	Body       string    `json:"body"`
-	AuthorName string    `json:"author_name"`
+	ID                 uuid.UUID `json:"id"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+	UserID             uuid.UUID `json:"user_id"`
+	Body               string    `json:"body"`
+	AuthorName         string    `json:"author_name"`
+	ExpirationDatetime time.Time `json:"expiration_datetime"`
 }
 
 type ChirpDataCreate struct {
-	Body string `json:"body" example:"My super chirp!"`
+	Body               string    `json:"body" example:"My super chirp!"`
+	ExpirationDatetime time.Time `json:"expiration_datetime" example:"2023-12-31T23:59:59Z"`
 }
 
 // @Summary      Create a new chirp
@@ -66,8 +68,9 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 	}
 
 	chirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
-		Body:   cleaned,
-		UserID: userID,
+		Body:               cleaned,
+		ExpirationDatetime: params.ExpirationDatetime,
+		UserID:             userID,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create chirp", err)
@@ -75,11 +78,12 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 	}
 
 	respondWithJSON(w, http.StatusCreated, Chirp{
-		ID:        chirp.ID,
-		CreatedAt: chirp.CreatedAt,
-		UpdatedAt: chirp.UpdatedAt,
-		Body:      chirp.Body,
-		UserID:    chirp.UserID,
+		ID:                 chirp.ID,
+		CreatedAt:          chirp.CreatedAt,
+		UpdatedAt:          chirp.UpdatedAt,
+		Body:               chirp.Body,
+		UserID:             chirp.UserID,
+		ExpirationDatetime: chirp.ExpirationDatetime,
 	})
 }
 

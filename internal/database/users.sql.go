@@ -8,7 +8,7 @@ package database
 import (
 	"context"
 	"time"
-	"log"
+
 	"github.com/google/uuid"
 )
 
@@ -88,15 +88,9 @@ type CreateUserParams struct {
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	var currentUser string
-	err := q.db.QueryRowContext(ctx, "SELECT current_user").Scan(&currentUser)
-	if err != nil {
-		log.Fatalf("Failed to check current DB user: %v", err)
-	}
-	log.Printf("Current DB user: %s", currentUser)
 	row := q.db.QueryRowContext(ctx, createUser, arg.Email, arg.HashedPassword, arg.UserName)
 	var i User
-	err = row.Scan(
+	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,

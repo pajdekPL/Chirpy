@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/PajdekPL/Chirpy/internal/auth"
+	"github.com/PajdekPL/Chirpy/internal/database"
 	"github.com/google/uuid"
 )
 
@@ -33,11 +34,12 @@ func (cfg *apiConfig) handlerChirpGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, Chirp{
-		ID:        dbChirp.ID,
-		CreatedAt: dbChirp.CreatedAt,
-		UpdatedAt: dbChirp.UpdatedAt,
-		UserID:    dbChirp.UserID,
-		Body:      dbChirp.Body,
+		ID:                 dbChirp.ID,
+		CreatedAt:          dbChirp.CreatedAt,
+		UpdatedAt:          dbChirp.UpdatedAt,
+		UserID:             dbChirp.UserID,
+		Body:               dbChirp.Body,
+		ExpirationDatetime: dbChirp.ExpirationDatetime,
 	})
 }
 
@@ -53,6 +55,12 @@ func (cfg *apiConfig) handlerChirpGet(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object}  ErrorResponse
 // @Router       /chirps [get]
 func (cfg *apiConfig) handlerChirpsRetrieve(w http.ResponseWriter, r *http.Request) {
+	filter := r.URL.Query().Get("filter")
+	if filter == "expired" {
+		cfg.handlerExpiredChirpsRetrieve(w, r)
+		return
+	}
+
 	dbChirps, err := cfg.db.GetChirps(r.Context())
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't retrieve chirps", err)
@@ -62,12 +70,37 @@ func (cfg *apiConfig) handlerChirpsRetrieve(w http.ResponseWriter, r *http.Reque
 	chirps := []Chirp{}
 	for _, dbChirp := range dbChirps {
 		chirps = append(chirps, Chirp{
-			ID:         dbChirp.ID,
-			CreatedAt:  dbChirp.CreatedAt,
-			UpdatedAt:  dbChirp.UpdatedAt,
-			UserID:     dbChirp.UserID,
-			Body:       dbChirp.Body,
-			AuthorName: dbChirp.AuthorName,
+			ID:                 dbChirp.ID,
+			CreatedAt:          dbChirp.CreatedAt,
+			UpdatedAt:          dbChirp.UpdatedAt,
+			UserID:             dbChirp.UserID,
+			Body:               dbChirp.Body,
+			AuthorName:         dbChirp.AuthorName,
+			ExpirationDatetime: dbChirp.ExpirationDatetime,
+		})
+	}
+
+	respondWithJSON(w, http.StatusOK, chirps)
+}
+
+func (cfg *apiConfig) handlerExpiredChirpsRetrieve(w http.ResponseWriter, r *http.Request) {
+
+	dbChirps, err := cfg.db.GetExpiredChirps(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't retrieve chirps", err)
+		return
+	}
+
+	chirps := []Chirp{}
+	for _, dbChirp := range dbChirps {
+		chirps = append(chirps, Chirp{
+			ID:                 dbChirp.ID,
+			CreatedAt:          dbChirp.CreatedAt,
+			UpdatedAt:          dbChirp.UpdatedAt,
+			UserID:             dbChirp.UserID,
+			Body:               dbChirp.Body,
+			AuthorName:         dbChirp.AuthorName,
+			ExpirationDatetime: dbChirp.ExpirationDatetime,
 		})
 	}
 
@@ -80,12 +113,14 @@ func (cfg *apiConfig) handlerChirpsRetrieve(w http.ResponseWriter, r *http.Reque
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
+// @Param        filter  query  string  expired  "filter=expired to filter by expired chirps"
 // @Success      200  {array}   Chirp
 // @Failure      401  {object}  ErrorResponse
 // @Failure      404  {object}  ErrorResponse
 // @Failure      500  {object}  ErrorResponse
 // @Router       /user/chirps [get]
 func (cfg *apiConfig) handlerChirpsUserRetrieve(w http.ResponseWriter, r *http.Request) {
+	filter := r.URL.Query().Get("filter")
 	token, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Couldn't find JWT", err)
@@ -96,8 +131,37 @@ func (cfg *apiConfig) handlerChirpsUserRetrieve(w http.ResponseWriter, r *http.R
 		respondWithError(w, http.StatusUnauthorized, "Couldn't validate JWT", err)
 		return
 	}
+	var userChirps []database.GetChirpsByUserRow
+	if filter == "expired" {
+		cfg.handlerExpiredChirpsUserRetrieve(w, r, userID)
+		return
+	}
 
-	userChirps, err := cfg.db.GetChirpsByUser(r.Context(), userID)
+	userChirps, err = cfg.db.GetChirpsByUser(r.Context(), userID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Couldn't get user chirps", err)
+		return
+	}
+
+	chirps := []Chirp{}
+	for _, dbChirp := range userChirps {
+		chirps = append(chirps, Chirp{
+			ID:                 dbChirp.ID,
+			CreatedAt:          dbChirp.CreatedAt,
+			UpdatedAt:          dbChirp.UpdatedAt,
+			UserID:             dbChirp.UserID,
+			Body:               dbChirp.Body,
+			AuthorName:         dbChirp.AuthorName,
+			ExpirationDatetime: dbChirp.ExpirationDatetime,
+		})
+	}
+
+	respondWithJSON(w, http.StatusOK, chirps)
+}
+
+func (cfg *apiConfig) handlerExpiredChirpsUserRetrieve(w http.ResponseWriter, r *http.Request, userID uuid.UUID) {
+
+	userChirps, err := cfg.db.GetExpiredChirpsByUser(r.Context(), userID)
 
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Couldn't get user chirps", err)
@@ -107,12 +171,13 @@ func (cfg *apiConfig) handlerChirpsUserRetrieve(w http.ResponseWriter, r *http.R
 	chirps := []Chirp{}
 	for _, dbChirp := range userChirps {
 		chirps = append(chirps, Chirp{
-			ID:         dbChirp.ID,
-			CreatedAt:  dbChirp.CreatedAt,
-			UpdatedAt:  dbChirp.UpdatedAt,
-			UserID:     dbChirp.UserID,
-			Body:       dbChirp.Body,
-			AuthorName: dbChirp.AuthorName,
+			ID:                 dbChirp.ID,
+			CreatedAt:          dbChirp.CreatedAt,
+			UpdatedAt:          dbChirp.UpdatedAt,
+			UserID:             dbChirp.UserID,
+			Body:               dbChirp.Body,
+			AuthorName:         dbChirp.AuthorName,
+			ExpirationDatetime: dbChirp.ExpirationDatetime,
 		})
 	}
 
