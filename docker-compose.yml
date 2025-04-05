@@ -4,13 +4,10 @@ services:
   db-init:
     image: postgres:17
     restart: on-failure
-    environment:
-      - PGPASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_HOST=postgres
-      - POSTGRES_DB=postgres
     env_file:
       - .env_pg
+    environment:
+      - POSTGRES_HOST=postgres
     volumes:
       - ./init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
     command: bash /docker-entrypoint-initdb.d/init-databases.sh
