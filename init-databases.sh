@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+set -o pipefail
 
 # Debug information
 echo "Using POSTGRES_USER: $POSTGRES_USER"
