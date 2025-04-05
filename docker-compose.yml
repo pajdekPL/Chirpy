@@ -12,15 +12,15 @@ services:
       - .env_pg
     command: >
       bash -c "
-        until pg_isready -h postgres -U '${POSTGRES_USER}'; do
+        until PGPASSWORD=${POSTGRES_PASSWORD} pg_isready -h postgres -U '${POSTGRES_USER}'; do
           echo 'Waiting for postgres...'
           sleep 1
         done;
-        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy1;' &&
-        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy2;' &&
-        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy3;' &&
-        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy4;' &&
-        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy5;'
+        PGPASSWORD=${POSTGRES_PASSWORD} psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy1;' &&
+        PGPASSWORD=${POSTGRES_PASSWORD} psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy2;' &&
+        PGPASSWORD=${POSTGRES_PASSWORD} psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy3;' &&
+        PGPASSWORD=${POSTGRES_PASSWORD} psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy4;' &&
+        PGPASSWORD=${POSTGRES_PASSWORD} psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy5;'
       "
     depends_on:
       - postgres
