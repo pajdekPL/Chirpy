@@ -55,9 +55,14 @@ type apiConfig struct {
 
 func main() {
 	godotenv.Load()
+	dbName := os.Getenv("DB_NAME")
 	dbURL := os.Getenv("DB_URL")
 	if dbURL == "" {
 		log.Fatal("DB_URL must be set")
+	}
+    if dbName != "" {
+		dbURL = dbURL + dbName + "?sslmode=disable"
+		log.Printf("Connecting to: %s\n", dbURL)
 	}
 	platform := os.Getenv("PLATFORM")
 	if platform == "" {
