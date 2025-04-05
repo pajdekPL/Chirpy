@@ -15,10 +15,15 @@ echo "Postgres is ready, creating databases..."
 # Create databases
 for i in {1..5}; do
   echo "Creating database chirpy$i..."
-  PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -U "$POSTGRES_USER" -c "CREATE DATABASE IF NOT EXISTS chirpy$i;"
-  if [ $? -eq 0 ]; then
-    echo "Database chirpy$i created successfully"
+  # Check if database exists
+  if PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -U "$POSTGRES_USER" -lqt | cut -d \| -f 1 | grep -qw "chirpy$i"; then
+    echo "Database chirpy$i already exists"
   else
-    echo "Failed to create database chirpy$i"
+    PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -U "$POSTGRES_USER" -c "CREATE DATABASE chirpy$i;"
+    if [ $? -eq 0 ]; then
+      echo "Database chirpy$i created successfully"
+    else
+      echo "Failed to create database chirpy$i"
+    fi
   fi
 done 
