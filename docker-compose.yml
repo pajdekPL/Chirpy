@@ -1,6 +1,24 @@
 version: "3.8"
 
 services:
+  db-init:
+    image: postgres:17
+    restart: on-failure
+    environment:
+      - PGPASSWORD=${POSTGRES_PASSWORD}
+    env_file:
+      - .env_pg
+    command: >
+      bash -c "psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE chirpy1;' &&
+               psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE chirpy2;' &&
+               psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE chirpy3;' &&
+               psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE chirpy4;' &&
+               psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE chirpy5;'"
+    depends_on:
+      - postgres
+    networks:
+      - chirpy-network
+
   chirpy-1:
     build:
       context: .
@@ -28,7 +46,7 @@ services:
     env_file:
       - .env
     depends_on:
-      - postgres
+      - db-init
     networks:
       - chirpy-network
 
@@ -59,7 +77,7 @@ services:
     env_file:
       - .env
     depends_on:
-      - postgres
+      - db-init
     networks:
       - chirpy-network
 
@@ -90,7 +108,7 @@ services:
     env_file:
       - .env
     depends_on:
-      - postgres
+      - db-init
     networks:
       - chirpy-network
 
@@ -121,7 +139,7 @@ services:
     env_file:
       - .env
     depends_on:
-      - postgres
+      - db-init
     networks:
       - chirpy-network
 
@@ -152,7 +170,7 @@ services:
     env_file:
       - .env
     depends_on:
-      - postgres
+      - db-init
     networks:
       - chirpy-network
 

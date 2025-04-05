@@ -15,7 +15,7 @@ if [ -n "$DB_NAME" ]; then
   BASE_URL=$(echo "$DB_URL" | sed -E 's/\/[^\/]+(\?.*)?$//')
   
   # Construct the full URL with the database name and parameters
-  export DB_URL="${BASE_URL}/${DB_NAME}?sslmode=disable"
+  export DB_URL="${BASE_URL}${DB_NAME}?sslmode=disable"
   echo "Using database URL: $DB_URL"
 else
   echo "Warning: DB_NAME is not set. Using default DB_URL."
