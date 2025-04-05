@@ -16,11 +16,11 @@ services:
           echo 'Waiting for postgres...'
           sleep 1
         done;
-        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE chirpy1;' &&
-        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE chirpy2;' &&
-        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE chirpy3;' &&
-        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE chirpy4;' &&
-        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE chirpy5;'
+        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy1;' &&
+        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy2;' &&
+        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy3;' &&
+        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy4;' &&
+        psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy5;'
       "
     depends_on:
       - postgres
