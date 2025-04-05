@@ -13,8 +13,22 @@ services:
     env_file:
       - .env
     depends_on:
-      migrations:
+      migrations-1:
         condition: service_completed_successfully
+    networks:
+      - chirpy-network
+
+  migrations-1:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrations
+    restart: on-failure
+    environment:
+      - DB_NAME=chirpy1
+    env_file:
+      - .env
+    depends_on:
+      - postgres
     networks:
       - chirpy-network
 
@@ -30,8 +44,22 @@ services:
     env_file:
       - .env
     depends_on:
-      migrations:
+      migrations-2:
         condition: service_completed_successfully
+    networks:
+      - chirpy-network
+
+  migrations-2:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrations
+    restart: on-failure
+    environment:
+      - DB_NAME=chirpy2
+    env_file:
+      - .env
+    depends_on:
+      - postgres
     networks:
       - chirpy-network
 
@@ -47,8 +75,22 @@ services:
     env_file:
       - .env
     depends_on:
-      migrations:
+      migrations-3:
         condition: service_completed_successfully
+    networks:
+      - chirpy-network
+
+  migrations-3:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrations
+    restart: on-failure
+    environment:
+      - DB_NAME=chirpy3
+    env_file:
+      - .env
+    depends_on:
+      - postgres
     networks:
       - chirpy-network
 
@@ -64,8 +106,22 @@ services:
     env_file:
       - .env
     depends_on:
-      migrations:
+      migrations-4:
         condition: service_completed_successfully
+    networks:
+      - chirpy-network
+
+  migrations-4:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrations
+    restart: on-failure
+    environment:
+      - DB_NAME=chirpy4
+    env_file:
+      - .env
+    depends_on:
+      - postgres
     networks:
       - chirpy-network
 
@@ -81,16 +137,18 @@ services:
     env_file:
       - .env
     depends_on:
-      migrations:
+      migrations-5:
         condition: service_completed_successfully
     networks:
       - chirpy-network
 
-  migrations:
+  migrations-5:
     build:
       context: .
       dockerfile: Dockerfile.migrations
     restart: on-failure
+    environment:
+      - DB_NAME=chirpy5
     env_file:
       - .env
     depends_on:
