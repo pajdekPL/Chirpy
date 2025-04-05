@@ -10,18 +10,9 @@ services:
       - POSTGRES_HOST=postgres
     env_file:
       - .env_pg
-    command: >
-      bash -c "
-        until PGPASSWORD=${POSTGRES_PASSWORD} pg_isready -h postgres -U '${POSTGRES_USER}'; do
-          echo 'Waiting for postgres...'
-          sleep 1
-        done;
-        PGPASSWORD=${POSTGRES_PASSWORD} psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy1;' &&
-        PGPASSWORD=${POSTGRES_PASSWORD} psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy2;' &&
-        PGPASSWORD=${POSTGRES_PASSWORD} psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy3;' &&
-        PGPASSWORD=${POSTGRES_PASSWORD} psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy4;' &&
-        PGPASSWORD=${POSTGRES_PASSWORD} psql -h postgres -U ${POSTGRES_USER} -c 'CREATE DATABASE IF NOT EXISTS chirpy5;'
-      "
+    volumes:
+      - ./init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
+    command: bash /docker-entrypoint-initdb.d/init-databases.sh
     depends_on:
       - postgres
     networks:
