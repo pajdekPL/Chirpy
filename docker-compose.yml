@@ -12,7 +12,7 @@ services:
       - .env_pg
     command: >
       bash -c "
-        until pg_isready -h postgres -U ${POSTGRES_USER}; do
+        until pg_isready -h postgres -U '${POSTGRES_USER}'; do
           echo 'Waiting for postgres...'
           sleep 1
         done;
