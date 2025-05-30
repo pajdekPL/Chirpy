@@ -20,7 +20,7 @@ import (
 // @Failure      404  {object}  map[string]string
 // @Router       /chirps/{id} [get]
 func (cfg *apiConfig) handlerChirpGet(w http.ResponseWriter, r *http.Request) {
-	chirpIDString := r.PathValue("chirpID")
+	chirpIDString := r.PathValue("id")
 	chirpID, err := uuid.Parse(chirpIDString)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid chirp ID", err)
